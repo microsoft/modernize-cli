@@ -13,10 +13,6 @@
 ## 🔧 Prerequisites
 
 Minimum requirements:
-- [Copilot CLI](https://github.com/github/copilot-cli): Install latest version with:
-  ```bash
-  npm install -g @github/copilot
-  ```
 - [Git](https://git-scm.com/downloads)
 - GitHub Copilot subscription with Free, Pro, Pro+, Business and Enterprise plans, See [Copilot plans](https://github.com/features/copilot/plans?ref_cta=Copilot+plans+signup&ref_loc=install-copilot-cli&ref_page=docs).
 
@@ -26,43 +22,34 @@ If you encounter issues with an agent, please open an issue so we can refine the
 
 ### Installation
 
-Extract the `modernize` binary from the archive:
+1. Clone this repository:
 
-- **Windows x64**: Extract `modernize_X.Y.Z_windows_x64.zip`
-- **Windows ARM64**: Extract `modernize_X.Y.Z_windows_arm64.zip`
-- **Linux x64**: Extract `modernize_X.Y.Z_linux_x64.tar.gz`
-- **Linux ARM64**: Extract `modernize_X.Y.Z_linux_arm64.tar.gz`
-- **macOS (Intel)**: Extract `modernize_X.Y.Z_darwin_x64.tar.gz`
-- **macOS (Apple Silicon)**: Extract `modernize_X.Y.Z_darwin_arm64.tar.gz`
+   ```bash
+   gh repo clone microsoft/modernize-cli
+   cd modernize-cli
+   ```
+
+2. Run the install script:
+
+   **Linux/macOS:**
+   ```bash
+   sh scripts/install.sh
+   ```
+
+   After installation, reload your shell profile to apply the PATH update:
+   ```bash
+   source ~/.bashrc   # or source ~/.zshrc for Zsh
+   ```
+
+   **Windows (PowerShell):**
+   ```powershell
+   .\scripts\install.ps1
+   ```
+
+The scripts automatically download the latest release, install the `modernize` binary to `~/.modernize/bin`, and add it to your PATH.
 
 > [!NOTE]
 > **For Linux users:** Requires **glibc 2.27+** (Ubuntu 18.04+, Debian 10+, Fedora 29+, Azure Linux 2.0+).
-
-### Prepare test environment
-
-Add `modernize` to your system PATH:
-
-**Windows:**
-
-```cmd
-# Add to current session (CMD)
-set PATH=%PATH%;C:\path\to\modernize
-
-# Add to current session (PowerShell)
-$env:PATH += ";C:\path\to\modernize"
-
-# Or add permanently via System Properties > Environment Variables
-```
-
-**Linux/macOS (Bash/Zsh):**
-```bash
-# Add to current session
-export PATH="$PATH:/path/to/modernize"
-
-# Or add permanently to your shell profile (~/.bashrc, ~/.zshrc)
-echo 'export PATH="$PATH:/path/to/modernize"' >> ~/.bashrc
-source ~/.bashrc
-```
 
 ### Prepare sample repo
 
@@ -300,20 +287,6 @@ modernize plan execute "skip the test" --plan-name spring-boot-upgrade
 
 # Headless mode for CI/CD 
 modernize plan execute "execute plan" --plan-name spring-boot-upgrade --no-tty
-```
-
-## Known issues
-
-### "Error occurred while communicating with GitHub Copilot CLI"
-
-If you encounter the error:
-```
-Error occurred while communicating with GitHub Copilot CLI. Please ensure it is installed and up to date.
-```
-
-Update the Copilot CLI to the latest version:
-```bash
-npm install -g @github/copilot
 ```
 
 ## Feedback
