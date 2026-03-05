@@ -160,8 +160,8 @@ tar -xzf "$ARCHIVE_PATH" -C "${TMP_DIR}/extracted" \
 # --- Install ---
 
 mkdir -p "$INSTALL_DIR"
-cp "${TMP_DIR}/extracted/modernize" "${INSTALL_DIR}/modernize" \
-    || error "Failed to copy binary."
+cp -r "${TMP_DIR}/extracted/." "${INSTALL_DIR}/" \
+    || error "Failed to copy files."
 chmod +x "${INSTALL_DIR}/modernize"
 
 info "Installed modernize to ${INSTALL_DIR}/modernize"
