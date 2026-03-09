@@ -14,6 +14,7 @@
 
 Minimum requirements:
 - [Git](https://git-scm.com/downloads)
+- [GitHub CLI (gh)](https://cli.github.com/) v2.45.0 or later
 - GitHub Copilot subscription with Free, Pro, Pro+, Business and Enterprise plans, See [Copilot plans](https://github.com/features/copilot/plans?ref_cta=Copilot+plans+signup&ref_loc=install-copilot-cli&ref_page=docs).
 
 If you encounter issues with an agent, please open an issue so we can refine the integration.
@@ -22,34 +23,36 @@ If you encounter issues with an agent, please open an issue so we can refine the
 
 ### Installation
 
-1. Clone this repository:
+#### Linux / macOS
 
-   ```bash
-   gh repo clone microsoft/modernize-cli
-   cd modernize-cli
-   ```
+```bash
+curl -fsSL https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.sh | sh
+```
 
-2. Run the install script:
-
-   **Linux/macOS:**
-   ```bash
-   sh scripts/install.sh
-   ```
-
-   After installation, reload your shell profile to apply the PATH update:
-   ```bash
-   source ~/.bashrc   # or source ~/.zshrc for Zsh
-   ```
-
-   **Windows (PowerShell):**
-   ```powershell
-   .\scripts\install.ps1
-   ```
-
-The scripts automatically download the latest release, install the modernize bundle to `~/.local/share/modernize` (Linux/macOS) or `%LOCALAPPDATA%\\Programs\\modernize` (Windows), place the `modernize` command in `~/.local/bin` (Linux/macOS), and add the command directory to your PATH.
+After installation, reload your shell profile to apply the PATH update:
+```bash
+source ~/.bashrc   # or source ~/.zshrc for Zsh
+```
 
 > [!NOTE]
 > **For Linux users:** Requires **glibc 2.27+** (Ubuntu 18.04+, Debian 10+, Fedora 29+, Azure Linux 2.0+).
+
+#### Windows
+
+**Option 1 — PowerShell one-liner:**
+```powershell
+iex (irm https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.ps1)
+```
+
+**Option 2 — MSI installer:**
+
+Download and run the latest MSI from the [Releases page](https://github.com/microsoft/modernize-cli/releases/latest).
+
+The installer places the `modernize` command in `%LOCALAPPDATA%\Programs\modernize` and adds it to your PATH automatically.
+
+---
+
+The scripts automatically download the latest release, install the modernize bundle to `~/.local/share/modernize` (Linux/macOS) or `%LOCALAPPDATA%\Programs\modernize` (Windows), place the `modernize` command in `~/.local/bin` (Linux/macOS), and add the command directory to your PATH.
 
 ### Prepare sample repo
 
