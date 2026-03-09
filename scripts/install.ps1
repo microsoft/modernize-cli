@@ -10,7 +10,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs' 'modernize')
+    [string]$InstallDir = (Join-Path (Join-Path $env:LOCALAPPDATA 'Programs') 'modernize')
 )
 
 $ErrorActionPreference = 'Stop'
