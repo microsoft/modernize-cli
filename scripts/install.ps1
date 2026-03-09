@@ -6,11 +6,11 @@
     Downloads the latest modernize release for Windows, verifies the gh CLI
     version, extracts the binary, and adds it to the current user PATH.
 .PARAMETER InstallDir
-    Directory to install modernize into. Defaults to ~/.modernize/bin.
+    Directory to install modernize into. Defaults to %LOCALAPPDATA%\Programs\modernize.
 #>
 [CmdletBinding()]
 param(
-    [string]$InstallDir = (Join-Path $env:USERPROFILE '.modernize' 'bin')
+    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs' 'modernize')
 )
 
 $ErrorActionPreference = 'Stop'

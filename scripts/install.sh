@@ -2,7 +2,6 @@
 set -e
 
 GITHUB_REPO="microsoft/modernize-cli"
-INSTALL_DIR="${MODERNIZE_INSTALL_DIR:-$HOME/.modernize/bin}"
 MIN_GH_VERSION="2.45.0"
 
 # --- Helpers ---
@@ -32,6 +31,13 @@ case "$OS" in
     darwin) OS="darwin" ;;
     *)      error "Unsupported OS: $OS" ;;
 esac
+
+case "$OS" in
+    linux)  DEFAULT_INSTALL_DIR="$HOME/.local/share/modernize" ;;
+    darwin) DEFAULT_INSTALL_DIR="$HOME/.local/share/modernize" ;;
+esac
+INSTALL_DIR="${MODERNIZE_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+BIN_DIR="${MODERNIZE_BIN_DIR:-$HOME/.local/bin}"
 
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -164,30 +170,43 @@ cp -r "${TMP_DIR}/extracted/." "${INSTALL_DIR}/" \
     || error "Failed to copy files."
 chmod +x "${INSTALL_DIR}/modernize"
 
-info "Installed modernize to ${INSTALL_DIR}/modernize"
+mkdir -p "$BIN_DIR"
+LINK_PATH="$BIN_DIR/modernize"
+rm -f "$LINK_PATH"
+if ln -s "${INSTALL_DIR}/modernize" "$LINK_PATH" 2>/dev/null; then
+    :
+else
+    cp "${INSTALL_DIR}/modernize" "$LINK_PATH" \
+        || error "Failed to create command entrypoint in $BIN_DIR."
+    chmod +x "$LINK_PATH"
+    warn "Could not create symlink. Copied binary to $LINK_PATH instead."
+fi
+
+info "Installed modernize bundle to ${INSTALL_DIR}"
+info "Installed command entrypoint to ${LINK_PATH}"
 
 # --- Add to PATH ---
 
 add_to_profile() {
     PROFILE_FILE="$1"
     if [ -f "$PROFILE_FILE" ] || [ "$2" = "create" ]; then
-        if ! grep -qF "$INSTALL_DIR" "$PROFILE_FILE" 2>/dev/null; then
+        if ! grep -qF "$BIN_DIR" "$PROFILE_FILE" 2>/dev/null; then
             printf '\n# Added by modernize installer\nexport PATH="$PATH:%s"\n' \
-                "$INSTALL_DIR" >> "$PROFILE_FILE"
-            info "Added $INSTALL_DIR to PATH in $PROFILE_FILE"
+                "$BIN_DIR" >> "$PROFILE_FILE"
+            info "Added $BIN_DIR to PATH in $PROFILE_FILE"
             PROFILE_UPDATED="$PROFILE_FILE"
         else
-            info "$PROFILE_FILE already contains $INSTALL_DIR in PATH"
+            info "$PROFILE_FILE already contains $BIN_DIR in PATH"
         fi
     fi
 }
 
 case ":${PATH}:" in
-    *":${INSTALL_DIR}:"*)
-        info "$INSTALL_DIR is already in PATH"
+    *":${BIN_DIR}:"*)
+        info "$BIN_DIR is already in PATH"
         ;;
     *)
-        info "Adding $INSTALL_DIR to PATH..."
+        info "Adding $BIN_DIR to PATH..."
         # Detect shell and update the appropriate profile
         CURRENT_SHELL=$(basename "${SHELL:-sh}")
         case "$CURRENT_SHELL" in

@@ -46,7 +46,7 @@ If you encounter issues with an agent, please open an issue so we can refine the
    .\scripts\install.ps1
    ```
 
-The scripts automatically download the latest release, install the `modernize` binary to `~/.modernize/bin`, and add it to your PATH.
+The scripts automatically download the latest release, install the modernize bundle to `~/.local/share/modernize` (Linux/macOS) or `%LOCALAPPDATA%\\Programs\\modernize` (Windows), place the `modernize` command in `~/.local/bin` (Linux/macOS), and add the command directory to your PATH.
 
 > [!NOTE]
 > **For Linux users:** Requires **glibc 2.27+** (Ubuntu 18.04+, Debian 10+, Fedora 29+, Azure Linux 2.0+).
