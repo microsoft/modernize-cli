@@ -120,12 +120,15 @@ ARCHIVE_PATH="${TMP_DIR}/${ARCHIVE}"
 # Fix: use the GitHub API asset endpoint with Accept: application/octet-stream, which
 # returns a pre-signed CDN URL (auth in query params). curl follows it without needing headers.
 if [ -n "$GH_TOKEN" ]; then
-    ASSET_API_URL=$(printf '%s' "$RELEASE_JSON" | awk -v archive="$ARCHIVE" '
+    # Normalize JSON (handles both pretty-printed and minified) by splitting on
+    # commas and braces so every key-value pair is on its own line, then locate
+    # the API asset URL that sits in the same asset object as the archive name.
+    ASSET_API_URL=$(printf '%s' "$RELEASE_JSON" | sed 's/[,{}]/\n/g' | awk -v archive="$ARCHIVE" '
         /api\.github\.com.*releases\/assets/ {
             match($0, /https:\/\/api\.github\.com[^"]+/)
-            last = substr($0, RSTART, RLENGTH)
+            url = substr($0, RSTART, RLENGTH)
         }
-        index($0, archive) && last != "" { print last; exit }
+        index($0, archive) && url != "" { print url; exit }
     ')
 fi
 
@@ -211,7 +214,7 @@ case ":${PATH}:" in
         CURRENT_SHELL=$(basename "${SHELL:-sh}")
         case "$CURRENT_SHELL" in
             zsh)  add_to_profile "$HOME/.zshrc"  "create" ;;
-            bash) add_to_profile "$HOME/.bashrc"       ;;
+            bash) add_to_profile "$HOME/.bashrc" "create" ;;
             *)
                 add_to_profile "$HOME/.bashrc"
                 add_to_profile "$HOME/.profile" "create"

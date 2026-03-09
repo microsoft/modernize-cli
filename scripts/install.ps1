@@ -28,7 +28,8 @@ function Exit-Error  { param([string]$Msg) Write-Host "[error] $Msg" -Foreground
 
 $arch = switch ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture) {
     'Arm64' { 'arm64' }
-    default { 'x64'  }
+    'X64'   { 'x64'   }
+    default { Exit-Error "Unsupported architecture: $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)" }
 }
 
 Write-Info "Detected platform: windows/$arch"
@@ -140,6 +141,7 @@ try {
 # --- Add to user PATH ---
 
 $userPath = [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+if ($null -eq $userPath) { $userPath = '' }
 if ($userPath -split ';' -contains $InstallDir) {
     Write-Info "$InstallDir is already in PATH"
 } else {
