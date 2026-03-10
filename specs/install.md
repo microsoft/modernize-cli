@@ -18,6 +18,6 @@
 
 7) Extract the archive (`.tar.gz` on Linux/macOS, `.zip` on Windows) into a temp directory
 
-8) Copy the binary to the install directory (default: `~/.modernize/bin` on Linux/macOS/Windows) and make it executable
+8) Copy the extracted bundle to the install directory (default: `~/.local/share/modernize` on Linux/macOS, `%LOCALAPPDATA%\\Programs\\modernize` on Windows) and make `modernize` executable
 
-9) Add the install directory to the user's `PATH` in the appropriate shell profile if not already present
+9) Ensure the command directory is in the user's `PATH` (default: `~/.local/bin` on Linux/macOS, install directory on Windows); on Linux/macOS, create `~/.local/bin/modernize` as an entrypoint to the installed bundle
