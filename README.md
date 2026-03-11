@@ -279,6 +279,29 @@ Run upgrade using the Cloud Coding Agent:
 modernize upgrade "Java 17" --delegate cloud
 ```
 
+### help
+
+Provides help and information commands.
+
+#### Syntax
+
+```bash
+modernize help [command]
+```
+
+#### Commands
+
+| Command | Description |
+|---------|-------------|
+| `models` | List available LLM models and their multipliers |
+
+#### Examples
+
+List available models:
+```bash
+modernize help models
+```
+
 ### Environment variables
 
 | Variable | Description | Default |
