@@ -139,7 +139,7 @@ modernize assess --source /path/to/project
 
 Assess multiple repos in current directory:
 ```bash
-modernize assess  --multi-repo
+modernize assess --multi-repo
 ```
 
 ### plan create
@@ -164,9 +164,9 @@ modernize plan create <prompt> [options]
 |--------|-------------|---------|
 | `--source <path>` | Path to the application source code | Current directory |
 | `--plan-name <name>` | Name for the modernization plan | `modernization-plan` |
-| `--language <lang>` | Programming language (java, dotnet, python) | Auto-detected |
-| `--issue-url <url>` | GitHub issue to reference when creating plan | None |
-| `--model <model>` | LLM model to use | `claude-sonnet-4.5` |
+| `--language <lang>` | Programming language (`java` or `dotnet`) | Auto-detected |
+| `--overwrite` | Overwrite an existing plan with the same name | Disabled |
+| `--model <model>` | LLM model to use | `claude-sonnet-4.6` |
 
 #### Examples
 
@@ -207,11 +207,10 @@ modernize plan execute [prompt] [options]
 |--------|-------------|---------|
 | `--source <path>` | Path to the application source code | Current directory |
 | `--plan-name <name>` | Name of the plan to execute | `modernization-plan` |
-| `--no-tty` | Run in headless mode (for CI/CD) | Interactive mode |
+| `--language <lang>` | Programming language (`java` or `dotnet`) | Auto-detected |
 | `--model <model>` | LLM model to use | `claude-sonnet-4.6` |
 | `--delegate <delegate>` | Execution mode: `local` (this machine) or `cloud` (Cloud Coding Agent) | `local` |
-| `--wait` | Wait for delegated tasks to complete and generate results (only valid with `--delegate cloud`) | Disabled |
-| `--force` | Force restart delegation, ignoring ongoing tasks (only valid with `--delegate cloud`) | Disabled |
+| `--force` | Force execution even when a CCA job is in progress | Disabled |
 
 #### Examples
 
@@ -242,8 +241,14 @@ Runs an end-to-end upgrade workflow — plan, and execute — in a single comman
 #### Syntax
 
 ```bash
-modernize upgrade [options]
+modernize upgrade [<prompt>] [options]
 ```
+
+#### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `[<prompt>]` | Target version (e.g., `Java 17`, `Spring Boot 3.2`, `.NET 10`). Defaults to latest LTS. |
 
 #### Options
 
@@ -251,7 +256,7 @@ modernize upgrade [options]
 |--------|-------------|---------|
 | `--source <source>` | Path to source project (relative or absolute local path) | `.` (current directory) |
 | `--delegate <delegate>` | Execution mode: `local` (this machine) or `cloud` (Cloud Coding Agent) | `local` |
-| `--model <model>` | LLM model to use | `claude-sonnet-4.5` |
+| `--model <model>` | LLM model to use | `claude-sonnet-4.6` |
 
 #### Examples
 
