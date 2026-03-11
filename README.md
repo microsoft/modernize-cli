@@ -25,6 +25,13 @@ Minimum requirements:
 
 ### Linux / macOS
 
+**Option 1 — Homebrew:**
+```bash
+brew tap microsoft/modernize https://github.com/microsoft/modernize-cli
+brew install modernize
+```
+
+**Option 2 — Shell script:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.sh | sh
 ```
