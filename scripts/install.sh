@@ -74,23 +74,14 @@ fi
 
 info "Fetching latest release..."
 
-# Obtain a GitHub token via gh CLI (if available) for authenticated requests.
-# This avoids rate-limiting without relying on the deprecated `gh release download`.
-GH_TOKEN=""
-if command -v gh > /dev/null 2>&1; then
-    GH_TOKEN=$(gh auth token 2>/dev/null || true)
-fi
-
 if command -v curl > /dev/null 2>&1; then
     RELEASE_JSON=$(curl -fsSL \
         -H "Accept: application/vnd.github+json" \
-        ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} \
         "https://api.github.com/repos/${GITHUB_REPO}/releases/latest") \
         || error "Failed to fetch release info from GitHub."
 elif command -v wget > /dev/null 2>&1; then
     RELEASE_JSON=$(wget -qO- \
         --header="Accept: application/vnd.github+json" \
-        ${GH_TOKEN:+--header="Authorization: Bearer $GH_TOKEN"} \
         "https://api.github.com/repos/${GITHUB_REPO}/releases/latest") \
         || error "Failed to fetch release info from GitHub."
 else
@@ -114,49 +105,15 @@ trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 
 ARCHIVE_PATH="${TMP_DIR}/${ARCHIVE}"
 
-# When a token is present, downloading via the browser URL (github.com/releases/download/...)
-# causes GitHub to redirect to a CDN URL that requires auth embedded in the URL's query
-# params. curl strips the Authorization header on cross-host redirects, so the CDN returns 404.
-# Fix: use the GitHub API asset endpoint with Accept: application/octet-stream, which
-# returns a pre-signed CDN URL (auth in query params). curl follows it without needing headers.
-if [ -n "$GH_TOKEN" ]; then
-    # Normalize JSON (handles both pretty-printed and minified) by splitting on
-    # commas and braces so every key-value pair is on its own line, then locate
-    # the API asset URL that sits in the same asset object as the archive name.
-    ASSET_API_URL=$(printf '%s' "$RELEASE_JSON" | sed 's/[,{}]/\n/g' | awk -v archive="$ARCHIVE" '
-        /api\.github\.com.*releases\/assets/ {
-            match($0, /https:\/\/api\.github\.com[^"]+/)
-            url = substr($0, RSTART, RLENGTH)
-        }
-        index($0, archive) && url != "" { print url; exit }
-    ')
-fi
-
 info "Downloading $ARCHIVE..."
-if [ -n "$ASSET_API_URL" ]; then
-    if command -v curl > /dev/null 2>&1; then
-        curl -fL --progress-bar \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/octet-stream" \
-            "$ASSET_API_URL" -o "$ARCHIVE_PATH" \
-            || error "Download failed."
-    else
-        wget -q --show-progress \
-            --header="Authorization: Bearer $GH_TOKEN" \
-            --header="Accept: application/octet-stream" \
-            "$ASSET_API_URL" -O "$ARCHIVE_PATH" \
-            || error "Download failed."
-    fi
+if command -v curl > /dev/null 2>&1; then
+    curl -fL --progress-bar \
+        "$DOWNLOAD_URL" -o "$ARCHIVE_PATH" \
+        || error "Download failed."
 else
-    if command -v curl > /dev/null 2>&1; then
-        curl -fL --progress-bar \
-            "$DOWNLOAD_URL" -o "$ARCHIVE_PATH" \
-            || error "Download failed."
-    else
-        wget -q --show-progress \
-            "$DOWNLOAD_URL" -O "$ARCHIVE_PATH" \
-            || error "Download failed."
-    fi
+    wget -q --show-progress \
+        "$DOWNLOAD_URL" -O "$ARCHIVE_PATH" \
+        || error "Download failed."
 fi
 
 # --- Extract ---

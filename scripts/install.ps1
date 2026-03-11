@@ -75,15 +75,7 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
 
 Write-Info 'Fetching latest release...'
 
-# Obtain a GitHub token via gh CLI (if available) for authenticated requests.
-# This avoids rate-limiting without relying on the deprecated `gh release download`.
-$ghToken = $null
-if (Get-Command gh -ErrorAction SilentlyContinue) {
-    $ghToken = (gh auth token 2>$null)
-}
-
 $apiHeaders = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'modernize-installer' }
-if ($ghToken) { $apiHeaders['Authorization'] = "Bearer $ghToken" }
 
 try {
     $release = Invoke-RestMethod `
@@ -108,33 +100,12 @@ $tmpDir      = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::Ge
 $archivePath = Join-Path $tmpDir $archiveName
 New-Item -ItemType Directory -Path $tmpDir | Out-Null
 
-# Locate the asset's GitHub API URL in the release data. Downloading via the
-# browser URL (github.com/releases/download/...) with a token causes GitHub to
-# redirect to a CDN that expects auth in URL query params. PowerShell/curl
-# typically strip the Authorization header on cross-host redirects, causing 404.
-# The API asset endpoint (with Accept: application/octet-stream) returns a
-# pre-signed CDN URL so the download follows the redirect cleanly.
-$assetApiUrl = $null
-if ($ghToken) {
-    $assetApiUrl = ($release.assets | Where-Object { $_.name -eq $archiveName } | Select-Object -First 1).url
-}
-
 try {
-    if ($assetApiUrl) {
-        Write-Info "Downloading $archiveName..."
-        try {
-            Invoke-WebRequest -Uri $assetApiUrl -OutFile $archivePath -UseBasicParsing `
-                -Headers @{ Authorization = "Bearer $ghToken"; Accept = 'application/octet-stream' }
-        } catch {
-            Exit-Error "Download failed: $_"
-        }
-    } else {
-        Write-Info "Downloading $downloadUrl..."
-        try {
-            Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath -UseBasicParsing
-        } catch {
-            Exit-Error "Download failed: $_"
-        }
+    Write-Info "Downloading $archiveName..."
+    try {
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath -UseBasicParsing
+    } catch {
+        Exit-Error "Download failed: $_"
     }
 
     # --- Extract ---
