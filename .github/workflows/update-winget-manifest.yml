@@ -1,4 +1,4 @@
-name: Update Winget Manifest
+name: Submit release to the WinGet community repository
 
 on:
   release:
@@ -14,8 +14,20 @@ on:
         default: "microsoft/modernize-cli"
 
 jobs:
-  update-winget-manifest:
+  publish-winget:
+    name: Submit to WinGet repository
+
+    permissions:
+      contents: read
+      pull-requests: write
+
     runs-on: windows-latest
+
+    # winget-create will read this env var for the GitHub token needed to submit a PR
+    # See https://aka.ms/winget-create-token
+    env:
+      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+
     steps:
       - name: Determine version
         id: version
@@ -31,14 +43,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION (tag: $TAG)"
 
-      - name: Install wingetcreate
+      - name: Submit package using wingetcreate
         shell: pwsh
         run: |
-          curl.exe -JLO https://aka.ms/wingetcreate/latest
-
-      - name: Generate updated winget manifest
-        shell: pwsh
-        run: |
+          $packageId = "GitHub.Copilot.modernization.agent"
           $version = "${{ steps.version.outputs.version }}"
           $tag = "${{ steps.version.outputs.tag }}"
           $repo = "${{ inputs.target_repo || 'microsoft/modernize-cli' }}"
@@ -47,13 +55,23 @@ jobs:
           $installerUrlx64 = "$baseUrl/modernize_${version}_windows_x64.msi"
           $installerUrlarm64 = "$baseUrl/modernize_${version}_windows_arm64.msi"
 
-          $releaseNotesUrl = "https://github.com/$repo/releases/tag/$tag"
-
-          .\wingetcreate.exe update GitHub.Copilot.modernization.agent `
+          # Update package using wingetcreate
+          curl.exe -JLO https://aka.ms/wingetcreate/latest
+          .\wingetcreate.exe update $packageId `
             --version $version `
             --urls "$installerUrlx64|x64" "$installerUrlarm64|arm64" `
-            --release-notes-url $releaseNotesUrl `
             --out manifests
+
+          # Add ReleaseNotesUrl to the version manifest
+          $versionManifest = Get-ChildItem -Path manifests -Filter "*.yaml" -Recurse | Where-Object { $_.Name -notmatch '\.(installer|locale)\.' } | Select-Object -First 1 -ExpandProperty FullName
+          if ($versionManifest) {
+            $releaseNotesUrl = "https://github.com/$repo/releases/tag/$tag"
+            $content = Get-Content -Path $versionManifest -Raw
+            if ($content -notmatch 'ReleaseNotesUrl') {
+              $content = $content -replace '(?m)^ManifestType:', "ReleaseNotesUrl: $releaseNotesUrl`nManifestType:"
+              Set-Content -Path $versionManifest -Value $content
+            }
+          }
 
           echo "Generated manifests:"
           Get-ChildItem -Recurse -File manifests | ForEach-Object {
@@ -61,17 +79,11 @@ jobs:
             Get-Content $_.FullName
           }
 
-      - name: Submit PR to winget-pkgs
-        shell: pwsh
-        env:
-          WINGETCREATE_GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
+          # Submit the manifest
           $installerManifest = Get-ChildItem -Path manifests -Filter "*.installer.yaml" -Recurse | Select-Object -First 1 -ExpandProperty FullName
           if (-not $installerManifest) {
-            Write-Error "No installer manifest found in manifests directory."
+            Write-Error "No installer manifest (*.installer.yaml) was found in the 'manifests' directory."
             exit 1
           }
           $manifestPath = Split-Path $installerManifest
-          echo "Submitting manifests from: $manifestPath"
-          Get-ChildItem $manifestPath
           .\wingetcreate.exe submit $manifestPath
