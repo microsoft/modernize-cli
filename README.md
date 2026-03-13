@@ -55,7 +55,17 @@ source ~/.bashrc   # or source ~/.zshrc for Zsh
 iex (irm https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.ps1)
 ```
 
-**Option 2 — MSI installer:**
+**Option 2 — Winget:**
+```powershell
+winget install GitHub.Copilot.modernization.agent
+```
+
+For silent installation (no prompts):
+```powershell
+winget install GitHub.Copilot.modernization.agent --silent
+```
+
+**Option 3 — MSI installer:**
 
 Download and run the latest MSI from the [Releases page](https://github.com/microsoft/modernize-cli/releases/latest).
 
