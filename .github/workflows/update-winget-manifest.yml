@@ -36,10 +36,8 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
 
-      - name: Update winget manifest and submit PR
+      - name: Generate updated winget manifest
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           $version = "${{ steps.version.outputs.version }}"
           $tag = "${{ steps.version.outputs.tag }}"
@@ -57,5 +55,24 @@ jobs:
             --version $version `
             --urls $urls `
             --release-notes-url $releaseNotesUrl `
+            --output manifests
+
+          echo "Generated manifests:"
+          Get-ChildItem -Recurse manifests | ForEach-Object {
+            echo "--- $($_.FullName) ---"
+            Get-Content $_.FullName
+          }
+
+      - name: Submit PR to winget-pkgs
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if (-not $env:GH_TOKEN) {
+            Write-Error "GH_TOKEN secret is not set. A classic PAT with public_repo scope is required."
+            exit 1
+          }
+
+          ./wingetcreate.exe submit `
             --token $env:GH_TOKEN `
-            --submit
+            manifests
