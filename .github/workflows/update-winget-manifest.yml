@@ -85,7 +85,7 @@ jobs:
             --out manifests
 
           echo "Generated manifests:"
-          Get-ChildItem -Recurse manifests | ForEach-Object {
+          Get-ChildItem -Recurse -File manifests | ForEach-Object {
             echo "--- $($_.FullName) ---"
             Get-Content $_.FullName
           }
