@@ -50,12 +50,7 @@ source ~/.bashrc   # or source ~/.zshrc for Zsh
 
 ### Windows
 
-**Option 1 — PowerShell one-liner:**
-```powershell
-iex (irm https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.ps1)
-```
-
-**Option 2 — Winget:**
+**Option 1 — Winget:**
 ```powershell
 winget install GitHub.Copilot.modernization.agent
 ```
@@ -64,6 +59,13 @@ For silent installation (no prompts):
 ```powershell
 winget install GitHub.Copilot.modernization.agent --silent
 ```
+
+**Option 2 — PowerShell one-liner:**
+```powershell
+iex (irm https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.ps1)
+```
+
+The scripts automatically download the latest release, install the modernize bundle to `~/.local/share/modernize` (Linux/macOS) or `%LOCALAPPDATA%\Programs\modernize` (Windows), place the `modernize` command in `~/.local/bin` (Linux/macOS), and add the command directory to your PATH.
 
 **Option 3 — MSI installer:**
 
@@ -75,8 +77,6 @@ The installer places the `modernize` command in `%LOCALAPPDATA%\Programs\moderni
 > After installation, open a new terminal for the `modernize` command to be available on your PATH.
 
 ---
-
-The scripts automatically download the latest release, install the modernize bundle to `~/.local/share/modernize` (Linux/macOS) or `%LOCALAPPDATA%\Programs\modernize` (Windows), place the `modernize` command in `~/.local/bin` (Linux/macOS), and add the command directory to your PATH.
 
 ## Use the interactive mode
 
