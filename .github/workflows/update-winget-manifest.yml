@@ -1,0 +1,89 @@
+name: Submit release to the WinGet community repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., v0.0.226)"
+        required: true
+      target_repo:
+        description: "Target GitHub repo (owner/name)"
+        required: false
+        default: "microsoft/modernize-cli"
+
+jobs:
+  publish-winget:
+    name: Submit to WinGet repository
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    runs-on: windows-latest
+
+    # winget-create will read this env var for the GitHub token needed to submit a PR
+    # See https://aka.ms/winget-create-token
+    env:
+      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+
+    steps:
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION (tag: $TAG)"
+
+      - name: Submit package using wingetcreate
+        shell: pwsh
+        run: |
+          $packageId = "GitHub.Copilot.modernization.agent"
+          $version = "${{ steps.version.outputs.version }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          $repo = "${{ inputs.target_repo || 'microsoft/modernize-cli' }}"
+          $baseUrl = "https://github.com/$repo/releases/download/$tag"
+
+          $installerUrlx64 = "$baseUrl/modernize_${version}_windows_x64.msi"
+          $installerUrlarm64 = "$baseUrl/modernize_${version}_windows_arm64.msi"
+
+          # Update package using wingetcreate
+          curl.exe -JLO https://aka.ms/wingetcreate/latest
+          .\wingetcreate.exe update $packageId `
+            --version $version `
+            --urls "$installerUrlx64|x64" "$installerUrlarm64|arm64" `
+            --out manifests
+
+          # Add ReleaseNotesUrl to the version manifest
+          $versionManifest = Get-ChildItem -Path manifests -Filter "*.yaml" -Recurse | Where-Object { $_.Name -notmatch '\.(installer|locale)\.' } | Select-Object -First 1 -ExpandProperty FullName
+          if ($versionManifest) {
+            $releaseNotesUrl = "https://github.com/$repo/releases/tag/$tag"
+            $content = Get-Content -Path $versionManifest -Raw
+            if ($content -notmatch 'ReleaseNotesUrl') {
+              $content = $content -replace '(?m)^ManifestType:', "ReleaseNotesUrl: $releaseNotesUrl`nManifestType:"
+              Set-Content -Path $versionManifest -Value $content
+            }
+          }
+
+          echo "Generated manifests:"
+          Get-ChildItem -Recurse -File manifests | ForEach-Object {
+            echo "--- $($_.FullName) ---"
+            Get-Content $_.FullName
+          }
+
+          # Submit the manifest
+          $installerManifest = Get-ChildItem -Path manifests -Filter "*.installer.yaml" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $installerManifest) {
+            Write-Error "No installer manifest (*.installer.yaml) was found in the 'manifests' directory."
+            exit 1
+          }
+          $manifestPath = Split-Path $installerManifest
+          .\wingetcreate.exe submit $manifestPath
