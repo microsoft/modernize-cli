@@ -1,8 +1,12 @@
 # GitHub Copilot modernization CLI
 
-## What is GitHub Copilot modernization?
+## What is GitHub Copilot modernization CLI?
 
-[GitHub Copilot modernization](https://aka.ms/ghcp-appmod) provides AI-powered capabilities to help developers modernize Java and .NET applications easily and confidently. Github Copilot modernization cli enables autonomous, end-to-end application modernization—from analyzing applications and generating plans to executing modernization tasks in agentic way.
+[GitHub Copilot modernization](https://aka.ms/ghcp-appmod) provides AI-powered capabilities to help users modernize Java and .NET applications easily and confidently.
+
+Organizations modernizing multiple applications need consistency, repeatability, and the ability to define standards that apply across every dev team and repository. The [GitHub Copilot Modernization Agent](https://aka.ms/ghcp-modernization-agent) is built for these requirements.
+
+Delivered through the Modernize CLI, the modernization agent enables agentic, end-to-end application modernization through intelligent workflow orchestration. It provides architects and app owners with a platform to define modernization standards once - via customizable, reusable skills - and apply them consistently across multiple applications and repositories. It offers a unified CLI and TUI experience for hands-on modernization of individual applications.
 
 ## Learn More
 
