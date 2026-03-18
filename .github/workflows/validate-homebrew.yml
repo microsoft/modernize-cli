@@ -32,7 +32,7 @@ jobs:
 
       - name: Tap and install modernize
         run: |
-          brew tap microsoft/modernize https://github.com/${{ github.repository }}
+          brew tap ${{ github.repository }} https://github.com/${{ github.repository }}
           brew install modernize
 
       - name: Extract expected version from formula
