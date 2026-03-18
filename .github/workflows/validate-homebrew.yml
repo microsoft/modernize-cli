@@ -11,8 +11,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            name: macOS Intel
           - os: macos-latest
             name: macOS ARM64
           - os: ubuntu-latest
