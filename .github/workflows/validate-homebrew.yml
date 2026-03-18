@@ -1,0 +1,52 @@
+name: Validate Homebrew Installation
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  validate-homebrew:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'Update Homebrew formula')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS ARM64
+          - os: ubuntu-latest
+            name: Linux x64
+          - os: ubuntu-24.04-arm
+            name: Linux ARM64
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap and install modernize
+        run: |
+          brew tap ${{ github.repository }} https://github.com/${{ github.repository }}
+          brew install modernize
+
+      - name: Extract expected version from formula
+        id: formula
+        run: |
+          version=$(grep '^  version ' Formula/modernize.rb | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Expected version: $version"
+
+      - name: Verify installation
+        run: |
+          output=$(modernize --version)
+          echo "Version output: $output"
+          if echo "$output" | grep -q "${{ steps.formula.outputs.version }}"; then
+            echo "Version verified successfully"
+          else
+            echo "::error::Version mismatch. Expected '${{ steps.formula.outputs.version }}' in output but got: $output"
+            exit 1
+          fi
