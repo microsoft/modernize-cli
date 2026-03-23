@@ -86,4 +86,4 @@ jobs:
             exit 1
           }
           $manifestPath = Split-Path $installerManifest
-          .\wingetcreate.exe submit $manifestPath
+          .\wingetcreate.exe submit $manifestPath --prtitle "Update GitHub.Copilot.modernization.agent to $version" --prbody "cc @qianwens @showpune @shizhMSFT"
