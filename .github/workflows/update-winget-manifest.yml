@@ -93,7 +93,8 @@ jobs:
           
           # Extract PR URL from output
           $prUrl = ""
-          if ($output -match 'https://github\.com/microsoft/winget-pkgs/pull/\d+') {
+          $outputText = $output | Out-String
+          if ($outputText -match 'https://github\.com/microsoft/winget-pkgs/pull/\d+') {
             $prUrl = $matches[0]
             Write-Output "PR URL: $prUrl"
             echo "pr_url=$prUrl" >> $env:GITHUB_OUTPUT
