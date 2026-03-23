@@ -7,6 +7,11 @@ on:
 jobs:
   validate-homebrew:
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'Update Homebrew formula')
+    
+    permissions:
+      contents: read
+      issues: write
+    
     strategy:
       fail-fast: false
       matrix:
