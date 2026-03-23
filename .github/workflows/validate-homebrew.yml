@@ -7,6 +7,11 @@ on:
 jobs:
   validate-homebrew:
     if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'Update Homebrew formula')
+    
+    permissions:
+      contents: read
+      issues: write
+    
     strategy:
       fail-fast: false
       matrix:
@@ -41,6 +46,7 @@ jobs:
           echo "Expected version: $version"
 
       - name: Verify installation
+        id: verify
         run: |
           output=$(modernize --version)
           echo "Version output: $output"
@@ -50,3 +56,17 @@ jobs:
             echo "::error::Version mismatch. Expected '${{ steps.formula.outputs.version }}' in output but got: $output"
             exit 1
           fi
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Homebrew validation failed on ${{ matrix.name }}`,
+              body: `Homebrew installation validation failed for **${{ matrix.name }}**.\n\n**PR:** #${{ github.event.pull_request.number }}\n**Expected version:** ${{ steps.formula.outputs.version }}\n**Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nPlease investigate the failure.`,
+              labels: ['homebrew', 'validation-failure'],
+              assignees: ['galiacheng']
+            });

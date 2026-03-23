@@ -20,6 +20,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      issues: write
 
     runs-on: windows-latest
 
@@ -44,6 +45,7 @@ jobs:
           echo "Version: $VERSION (tag: $TAG)"
 
       - name: Submit package using wingetcreate
+        id: submit
         shell: pwsh
         run: |
           $packageId = "GitHub.Copilot.modernization.agent"
@@ -86,4 +88,33 @@ jobs:
             exit 1
           }
           $manifestPath = Split-Path $installerManifest
-          .\wingetcreate.exe submit $manifestPath
+          $output = .\wingetcreate.exe submit $manifestPath --prtitle "Update GitHub.Copilot.modernization.agent to $version" 2>&1
+          Write-Output $output
+          
+          # Extract PR URL from output
+          $prUrl = ""
+          if ($output -match 'https://github\.com/microsoft/winget-pkgs/pull/\d+') {
+            $prUrl = $matches[0]
+            Write-Output "PR URL: $prUrl"
+            echo "pr_url=$prUrl" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Warning "Could not extract PR URL from output"
+            echo "pr_url=" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create tracking issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prUrl = '${{ steps.submit.outputs.pr_url }}';
+            const body = prUrl 
+              ? `A PR has been submitted to microsoft/winget-pkgs for version ${{ steps.version.outputs.version }}.\n\nPR: ${prUrl}`
+              : `A PR has been submitted to microsoft/winget-pkgs for version ${{ steps.version.outputs.version }}.\n\nCheck https://github.com/microsoft/winget-pkgs/pulls for status.`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `WinGet PR submitted for v${{ steps.version.outputs.version }}`,
+              body: body,
+              assignees: ['qianwens', 'shizhMSFT', 'galiacheng']
+            });
