@@ -22,6 +22,7 @@ class Modernize < Formula
   end
 
   license "Proprietary"
+  depends_on "gh"
 
   def install
     libexec.install "modernize"
