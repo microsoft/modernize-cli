@@ -95,14 +95,17 @@ modernize
 You'll be guided through the end-to-end modernization experience via the main menu:
 
 ```
-○ How would you like to modernize your Java app?
+○ What would you like to do?
 
-  > 1. Assess application
-       Analyze the project and identify modernization opportunities
-    2. Create modernization plan
-       Generate a structured plan to guide the agent
-    3. Execute modernization plan
-       Run the tasks defined in the modernization plan
+  > 1. Assess
+       Analyze your source application and generate an assessment report
+    2. Plan
+       Create a modernization plan based on assessment findings
+    3. Execute
+       Run tasks defined in your modernization plan
+    ───────────────────────────────────────────────────────
+    4. Upgrade
+       Upgrade your runtime and frameworks to the latest versions
 ```
 
 ## Commands
@@ -130,14 +133,18 @@ modernize assess [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--source <path>` | Path to source project (relative or absolute local path) | `.` (current directory) |
+| `--source <path-or-url>` | A directory path or Git URL (HTTPS or SSH). Repeatable for multiple repositories. |  None |
 | `--output-path <path>` | Custom output path for assessment results | `.github/modernize/assessment/` |
 | `--issue-url <url>` | GitHub issue URL to update with assessment summary | None |
-| `--multi-repo` | Enable multi-repo assess. Scans first-level subdirectories for multiple repositories | Disabled |
+| `--assess-config <path>` | Path to assessment configuration YAML file for customizing analysis parameters. Auto-discovered from `.github/modernize/assessment/reports/assessment-config.yaml` if not specified. | None |
+| `--format <format>` | Output format for assessment reports: `html` or `markdown` | `html` |
 | `--model <model>` | LLM model to use | `claude-sonnet-4.6` |
 | `--delegate <delegate>` | Execution mode: `local` (this machine) or `cloud` (Cloud Coding Agent) | `local` |
 | `--wait` | Wait for delegated tasks to complete and generate results (only valid with `--delegate cloud`) | Disabled |
 | `--force` | Force restart delegation, ignoring ongoing tasks (only valid with `--delegate cloud`) | Disabled |
+
+> [!NOTE]
+> `--multi-repo` is deprecated. Use repeatable `--source` to specify multiple repositories instead.
 
 #### Examples
 
@@ -161,9 +168,19 @@ Assess specific project directory:
 modernize assess --source /path/to/project
 ```
 
-Assess multiple repos in current directory:
+Assess a remote Git repository:
 ```bash
-modernize assess --multi-repo
+modernize assess --source https://github.com/org/repo.git
+```
+
+Assess multiple repositories:
+```bash
+modernize assess --source /path/to/project1 --source /path/to/project2
+```
+
+Delegate assessment to the Cloud Coding Agent:
+```bash
+modernize assess --source https://github.com/org/repo.git --delegate cloud --wait
 ```
 
 ### plan create
@@ -278,7 +295,7 @@ modernize upgrade [<prompt>] [options]
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--source <source>` | Path to source project (relative or absolute local path) | `.` (current directory) |
+| `--source <source>` | Path to source project (relative or absolute local path). Repeatable for multiple repositories. | `.` (current directory) |
 | `--delegate <delegate>` | Execution mode: `local` (this machine) or `cloud` (Cloud Coding Agent) | `local` |
 | `--model <model>` | LLM model to use | `claude-sonnet-4.6` |
 
@@ -298,10 +315,27 @@ Run upgrade on a specific project:
 modernize upgrade "Java 17" --source /path/to/project
 ```
 
+Run upgrade on multiple projects:
+```bash
+modernize upgrade "Java 17" --source /path/to/project1 --source /path/to/project2
+```
+
 Run upgrade using the Cloud Coding Agent:
 ```bash
 modernize upgrade "Java 17" --delegate cloud
 ```
+
+### update
+
+Checks for and applies CLI updates. Behavior adapts to the install method automatically.
+
+#### Syntax
+
+```bash
+modernize update
+```
+
+For manual installations, the command downloads and replaces the binary automatically. For Homebrew or WinGet installations, it shows the appropriate upgrade command.
 
 ### help
 
