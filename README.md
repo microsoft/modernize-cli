@@ -42,6 +42,10 @@ curl -fsSL https://raw.githubusercontent.com/microsoft/modernize-cli/main/script
 
 The script automatically downloads the latest release, install the modernize bundle to `~/.local/share/modernize`, place the `modernize` command in `~/.local/bin`, and add the command directory to your PATH.
 
+> [!TIP]
+> To install the latest prerelease instead, append `--prerelease`:
+> `curl -fsSL https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.sh | sh -s -- --prerelease`
+
 After installation, reload your shell profile to apply the PATH update:
 ```bash
 source ~/.bashrc   # or source ~/.zshrc for Zsh
@@ -66,6 +70,10 @@ winget install GitHub.Copilot.modernization.agent --silent
 ```powershell
 iex (irm https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.ps1)
 ```
+
+> [!TIP]
+> To install the latest prerelease instead, run with `-Prerelease`:
+> `& ([scriptblock]::Create((irm https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.ps1))) -Prerelease`
 
 **Option 3 — MSI installer:**
 
