@@ -8,7 +8,9 @@
 
 3) Obtain a GitHub token via `gh auth token` (if gh CLI is available and authenticated)
 
-4) Fetch the latest release metadata from the GitHub API (`api.github.com/repos/.../releases/latest`), using the token as a Bearer header if available
+4) Fetch the release metadata from the GitHub API, using the token as a Bearer header if available:
+   - Default: latest stable release (`api.github.com/repos/.../releases/latest`)
+   - With `--prerelease` (shell) / `-Prerelease` (PowerShell): newest release overall including prereleases, via the releases list endpoint (`api.github.com/repos/.../releases?per_page=1`), taking the first (newest) entry
 
 5) Resolve the archive filename from the release metadata based on the detected os-arch
 

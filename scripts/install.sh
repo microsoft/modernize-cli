@@ -3,12 +3,34 @@ set -e
 
 GITHUB_REPO="microsoft/modernize-cli"
 MIN_GH_VERSION="2.45.0"
+PRERELEASE=0
 
 # --- Helpers ---
 
 info()    { printf '\033[0;32m[info]\033[0m  %s\n' "$*"; }
 warn()    { printf '\033[0;33m[warn]\033[0m  %s\n' "$*" >&2; }
 error()   { printf '\033[0;31m[error]\033[0m %s\n' "$*" >&2; exit 1; }
+
+usage() {
+    cat <<'EOF'
+Usage: install.sh [options]
+
+Options:
+  --prerelease   Install the latest prerelease instead of the latest stable release
+  -h, --help     Show this help message and exit
+EOF
+}
+
+# --- Parse arguments ---
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --prerelease) PRERELEASE=1 ;;
+        -h|--help)    usage; exit 0 ;;
+        *)            usage >&2; error "Unknown option: $1" ;;
+    esac
+    shift
+done
 
 version_lt() {
     # Returns 0 (true) if $1 < $2
@@ -72,17 +94,23 @@ fi
 
 # --- Fetch latest release version ---
 
-info "Fetching latest release..."
+if [ "$PRERELEASE" -eq 1 ]; then
+    info "Fetching latest prerelease..."
+    RELEASE_API="https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=1"
+else
+    info "Fetching latest release..."
+    RELEASE_API="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+fi
 
 if command -v curl > /dev/null 2>&1; then
     RELEASE_JSON=$(curl -fsSL \
         -H "Accept: application/vnd.github+json" \
-        "https://api.github.com/repos/${GITHUB_REPO}/releases/latest") \
+        "$RELEASE_API") \
         || error "Failed to fetch release info from GitHub."
 elif command -v wget > /dev/null 2>&1; then
     RELEASE_JSON=$(wget -qO- \
         --header="Accept: application/vnd.github+json" \
-        "https://api.github.com/repos/${GITHUB_REPO}/releases/latest") \
+        "$RELEASE_API") \
         || error "Failed to fetch release info from GitHub."
 else
     error "Neither curl nor wget found. Please install one of them."

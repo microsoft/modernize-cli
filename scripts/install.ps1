@@ -7,10 +7,13 @@
     version, extracts the binary, and adds it to the current user PATH.
 .PARAMETER InstallDir
     Directory to install modernize into. Defaults to %LOCALAPPDATA%\Programs\modernize.
+.PARAMETER Prerelease
+    Install the latest prerelease instead of the latest stable release.
 #>
 [CmdletBinding()]
 param(
-    [string]$InstallDir = (Join-Path (Join-Path $env:LOCALAPPDATA 'Programs') 'modernize')
+    [string]$InstallDir = (Join-Path (Join-Path $env:LOCALAPPDATA 'Programs') 'modernize'),
+    [switch]$Prerelease
 )
 
 $ErrorActionPreference = 'Stop'
@@ -73,17 +76,26 @@ if (Get-Command gh -ErrorAction SilentlyContinue) {
 
 # --- Fetch latest release ---
 
-Write-Info 'Fetching latest release...'
-
 $apiHeaders = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'modernize-installer' }
+
+if ($Prerelease) {
+    Write-Info 'Fetching latest prerelease...'
+    $releaseUri = "https://api.github.com/repos/$GitHubRepo/releases?per_page=1"
+} else {
+    Write-Info 'Fetching latest release...'
+    $releaseUri = "https://api.github.com/repos/$GitHubRepo/releases/latest"
+}
 
 try {
     $release = Invoke-RestMethod `
-        -Uri     "https://api.github.com/repos/$GitHubRepo/releases/latest" `
+        -Uri     $releaseUri `
         -Headers $apiHeaders
 } catch {
     Exit-Error "Failed to fetch release info from GitHub: $_"
 }
+
+# The list endpoint returns an array (newest first); select the first release.
+if ($release -is [System.Array]) { $release = $release[0] }
 
 $tag     = $release.tag_name
 $version = $tag -replace '^v', ''
