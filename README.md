@@ -32,6 +32,7 @@ Minimum requirements:
 **Option 1 — Homebrew:**
 ```bash
 brew tap microsoft/modernize https://github.com/microsoft/modernize-cli
+brew trust microsoft/modernize
 brew install modernize
 ```
 
