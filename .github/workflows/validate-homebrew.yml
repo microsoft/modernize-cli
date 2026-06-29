@@ -31,11 +31,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+        uses: Homebrew/actions/setup-homebrew@main
 
       - name: Tap and install modernize
         run: |
           brew tap ${{ github.repository }} https://github.com/${{ github.repository }}
+          brew trust ${{ github.repository }}
           brew install modernize
 
       - name: Extract expected version from formula
