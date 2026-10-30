@@ -206,7 +206,9 @@ public static class ReleaseErrorMode {
             throw 'Release helper requires an externally installed VC runtime: clean startup failed, then succeeded after installing VC runtime.'
         }
         Assert-Probe $report.CliBeforeRuntime -OutputPattern ([regex]::Escape($Version))
-        Assert-Probe $report.HelperBeforeRuntime -ExitCodes @(0, 2) -OutputPattern 'arguments are not supported|Usage'
+        if (-not $ValidateAppLocalRemediation) {
+            Assert-Probe $report.HelperBeforeRuntime -ExitCodes @(0, 2) -OutputPattern 'arguments are not supported|Usage'
+        }
     }
     $report.Passed = $true
 } catch {
