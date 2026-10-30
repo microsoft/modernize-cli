@@ -1,0 +1,99 @@
+name: Test Published Windows Release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-windows-release.yml'
+      - 'scripts/test-windows-release.ps1'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing release version to test (no release is created)'
+        required: true
+        default: '1.0.77'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-release:
+    name: Windows ${{ matrix.architecture }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: x64
+            runner: windows-2022
+          - architecture: arm64
+            runner: windows-11-arm
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_VERSION: ${{ inputs.version || '1.0.77' }}
+      RELEASE_ARCHITECTURE: ${{ matrix.architecture }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Download existing release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$') {
+            throw 'Invalid release version'
+          }
+          $assets = Join-Path $env:GITHUB_WORKSPACE '.agent-work/windows-release/assets'
+          New-Item -ItemType Directory -Path $assets -Force | Out-Null
+          $prefix = "modernize_$($env:RELEASE_VERSION)_windows_$($env:RELEASE_ARCHITECTURE)"
+          gh release download "v$env:RELEASE_VERSION" --repo microsoft/modernize-cli `
+            --pattern "$prefix.msi" --pattern "$prefix.zip" `
+            --pattern "modernize_$($env:RELEASE_VERSION)_checksums.txt" --dir $assets
+          if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
+
+      - name: Test signed artifacts and native startup without installing
+        run: |
+          ./scripts/test-windows-release.ps1 -Version $env:RELEASE_VERSION `
+            -Architecture $env:RELEASE_ARCHITECTURE `
+            -AssetDirectory .agent-work/windows-release/assets `
+            -WorkDirectory .agent-work/windows-release/work `
+            -OutputDirectory .agent-work/windows-release/results
+
+      - name: Test MSI and missing-runtime baseline in disposable Windows container
+        if: matrix.architecture == 'x64'
+        run: |
+          $assets = Join-Path $env:GITHUB_WORKSPACE '.agent-work/windows-release/assets'
+          $results = Join-Path $env:GITHUB_WORKSPACE '.agent-work/windows-release/results'
+          $scripts = Join-Path $env:GITHUB_WORKSPACE 'scripts'
+          $runtime = Join-Path $assets 'vc_redist.x64.exe'
+          Invoke-WebRequest https://aka.ms/vc14/vc_redist.x64.exe -OutFile $runtime
+          $signature = Get-AuthenticodeSignature $runtime
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw 'Official VC runtime installer signature verification failed'
+          }
+          Get-FileHash $runtime -Algorithm SHA256 | Format-List
+          docker info --format '{{.OSType}}'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows container daemon unavailable' }
+          docker run --rm --isolation=process --network none --memory 4g --cpus 2 `
+            --env MODERNIZE_RELEASE_CONTAINER=1 `
+            --mount "type=bind,source=$assets,target=C:\input,readonly" `
+            --mount "type=bind,source=$scripts,target=C:\tests,readonly" `
+            --mount "type=bind,source=$results,target=C:\results" `
+            mcr.microsoft.com/windows/servercore:ltsc2022 `
+            powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
+            -File C:\tests\test-windows-release.ps1 -Mode Container `
+            -Version $env:RELEASE_VERSION -Architecture x64 `
+            -AssetDirectory C:\input -WorkDirectory C:\work -OutputDirectory C:\results
+          if ($LASTEXITCODE -ne 0) { throw 'Clean-container release test failed; inspect Container-x64.json and MSI logs' }
+
+      - name: Upload diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-${{ matrix.architecture }}
+          path: .agent-work/windows-release/results/
+          if-no-files-found: warn
+          retention-days: 7
