@@ -169,6 +169,21 @@ public static class ReleaseErrorMode {
         $helper = Join-Path $plugin 'computer-use-mcp.exe'
         $report.CliBeforeRuntime = Invoke-ReleaseProcess (Join-Path $installed 'modernize.exe') '--version'
         $report.HelperBeforeRuntime = Invoke-ReleaseProcess $helper '--help'
+        $runtimeFiles = @(Get-ChildItem (Join-Path $AssetDirectory 'vc-runtime-x64') -Filter '*.dll')
+        if ($runtimeFiles.Count -eq 0) {
+            throw 'App-local runtime comparison requires official Visual Studio redistributable DLLs.'
+        }
+        $report.AppLocalRuntimeFiles = @($runtimeFiles | ForEach-Object {
+            [pscustomobject]@{ File = $_.Name; SHA256 = (Get-FileHash $_.FullName).Hash }
+        })
+        foreach ($runtimeFile in $runtimeFiles) {
+            Copy-Item $runtimeFile.FullName -Destination $plugin
+        }
+        $report.HelperWithAppLocalRuntime = Invoke-ReleaseProcess $helper '--help'
+        Assert-Probe $report.HelperWithAppLocalRuntime -ExitCodes @(0, 2) -OutputPattern 'arguments are not supported|Usage'
+        foreach ($runtimeFile in $runtimeFiles) {
+            Remove-Item (Join-Path $plugin $runtimeFile.Name)
+        }
         $runtimeInstaller = Join-Path $AssetDirectory 'vc_redist.x64.exe'
         $report.RuntimeInstall = Invoke-ReleaseProcess $runtimeInstaller `
             "/install /quiet /norestart /log `"$(Join-Path $OutputDirectory 'vcredist-install.log')`"" 180

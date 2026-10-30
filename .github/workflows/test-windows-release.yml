@@ -68,6 +68,24 @@ jobs:
           $assets = Join-Path $env:GITHUB_WORKSPACE '.agent-work/windows-release/assets'
           $results = Join-Path $env:GITHUB_WORKSPACE '.agent-work/windows-release/results'
           $scripts = Join-Path $env:GITHUB_WORKSPACE 'scripts'
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $visualStudio = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or -not $visualStudio) { throw 'Visual Studio C++ tools unavailable' }
+          $redist = Get-ChildItem (Join-Path $visualStudio 'VC\Redist\MSVC') -Directory |
+            Where-Object Name -Match '^\d+\.\d+\.\d+$' |
+            Sort-Object { [version]$_.Name } -Descending | Select-Object -First 1
+          if (-not $redist) { throw 'Visual Studio redistributable directory unavailable' }
+          $crt = Join-Path $redist.FullName 'x64\Microsoft.VC143.CRT'
+          $appLocal = New-Item -ItemType Directory -Path (Join-Path $assets 'vc-runtime-x64')
+          $runtimeFiles = @(Get-ChildItem $crt -Filter '*.dll')
+          if ($runtimeFiles.Count -eq 0) { throw 'Official redistributable DLLs unavailable' }
+          foreach ($runtimeFile in $runtimeFiles) {
+            $signature = Get-AuthenticodeSignature $runtimeFile.FullName
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+              throw "Invalid official runtime DLL: $($runtimeFile.Name)"
+            }
+            Copy-Item $runtimeFile.FullName -Destination $appLocal.FullName
+          }
           $runtime = Join-Path $assets 'vc_redist.x64.exe'
           Invoke-WebRequest https://aka.ms/vc14/vc_redist.x64.exe -OutFile $runtime
           $signature = Get-AuthenticodeSignature $runtime
