@@ -62,6 +62,15 @@ jobs:
             -WorkDirectory .agent-work/windows-release/work `
             -OutputDirectory .agent-work/windows-release/results
 
+      - name: Approximate WinGet installation validation
+        run: |
+          ./scripts/test-windows-release.ps1 -Mode Installation `
+            -Version $env:RELEASE_VERSION `
+            -Architecture $env:RELEASE_ARCHITECTURE `
+            -AssetDirectory .agent-work/windows-release/assets `
+            -WorkDirectory .agent-work/windows-release/installation-work `
+            -OutputDirectory .agent-work/windows-release/results
+
       - name: Test MSI and missing-runtime baseline in disposable Windows container
         if: matrix.architecture == 'x64'
         run: |

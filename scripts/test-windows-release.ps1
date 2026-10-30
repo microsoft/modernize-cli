@@ -6,7 +6,7 @@ param(
     [ValidateSet('x64', 'arm64')]
     [string]$Architecture = 'x64',
 
-    [ValidateSet('Host', 'Container')]
+    [ValidateSet('Host', 'Container', 'Installation')]
     [string]$Mode = 'Host',
 
     [Parameter(Mandatory = $true)]
@@ -148,6 +148,43 @@ try {
         Assert-Probe $report.McpHelper -ExitCodes @(0, 2) -OutputPattern 'arguments are not supported|Usage'
         $report.ComputerUseHelper = Invoke-ReleaseProcess (Join-Path $plugin 'CopilotComputerUse.exe') '--help'
         Assert-Probe $report.ComputerUseHelper -OutputPattern 'Usage'
+    } elseif ($Mode -eq 'Installation') {
+        $installed = Join-Path $WorkDirectory 'installed'
+        $installLog = Join-Path $OutputDirectory 'msi-install.log'
+        $report.MsiInstall = Invoke-ReleaseProcess "$env:WINDIR\System32\msiexec.exe" `
+            "/i `"$msi`" /qn /norestart INSTALLFOLDER=`"$installed`" /l*v `"$installLog`"" 180
+        Assert-Probe $report.MsiInstall -ExitCodes @(0, 3010)
+        try {
+            $plugin = Join-Path $installed "runtimes\win-$Architecture\native\plugins\computer-use"
+            $report.CliInstalled = Invoke-ReleaseProcess (Join-Path $installed 'modernize.exe') '--version'
+            Assert-Probe $report.CliInstalled -OutputPattern ([regex]::Escape($Version))
+            $report.McpHelperInstalled = Invoke-ReleaseProcess (Join-Path $plugin 'computer-use-mcp.exe') '--help'
+            Assert-Probe $report.McpHelperInstalled -ExitCodes @(0, 2) -OutputPattern 'arguments are not supported|Usage'
+            $report.ComputerUseHelperInstalled = Invoke-ReleaseProcess (Join-Path $plugin 'CopilotComputerUse.exe') '--help'
+            Assert-Probe $report.ComputerUseHelperInstalled -OutputPattern 'Usage'
+
+            $defender = Get-MpComputerStatus
+            $report.DefenderStatus = [pscustomobject]@{
+                AntivirusEnabled = $defender.AntivirusEnabled
+                RealTimeProtectionEnabled = $defender.RealTimeProtectionEnabled
+                AntivirusSignatureVersion = $defender.AntivirusSignatureVersion
+            }
+            if (-not $defender.AntivirusEnabled) {
+                throw 'Microsoft Defender Antivirus is not enabled on the validation runner.'
+            }
+            $detectionsBefore = @((Get-MpThreatDetection | ConvertTo-Json -Compress))
+            Start-MpScan -ScanType CustomScan -ScanPath $installed
+            $detectionsAfter = @((Get-MpThreatDetection | ConvertTo-Json -Compress))
+            $report.NewDefenderDetections = @($detectionsAfter | Where-Object { $_ -notin $detectionsBefore })
+            if ($report.NewDefenderDetections.Count -ne 0) {
+                throw "Microsoft Defender detected installed candidate files: $($report.NewDefenderDetections -join ', ')"
+            }
+        } finally {
+            $uninstallLog = Join-Path $OutputDirectory 'msi-uninstall.log'
+            $report.MsiUninstall = Invoke-ReleaseProcess "$env:WINDIR\System32\msiexec.exe" `
+                "/x `"$msi`" /qn /norestart /l*v `"$uninstallLog`"" 180
+            Assert-Probe $report.MsiUninstall -ExitCodes @(0, 3010)
+        }
     } else {
         if ($Architecture -ne 'x64') {
             throw 'The Windows Server Core container test currently supports x64 only.'
