@@ -77,8 +77,8 @@ jobs:
           if (-not $redist) { throw 'Visual Studio redistributable directory unavailable' }
           $crt = Join-Path $redist.FullName 'x64\Microsoft.VC143.CRT'
           $appLocal = New-Item -ItemType Directory -Path (Join-Path $assets 'vc-runtime-x64')
-          $runtimeFiles = @(Get-ChildItem $crt -Filter '*.dll')
-          if ($runtimeFiles.Count -eq 0) { throw 'Official redistributable DLLs unavailable' }
+          $runtimeFiles = @(Get-Item (Join-Path $crt 'vcruntime140.dll'))
+          if ($runtimeFiles.Count -ne 1) { throw 'Official vcruntime140.dll unavailable' }
           foreach ($runtimeFile in $runtimeFiles) {
             $signature = Get-AuthenticodeSignature $runtimeFile.FullName
             if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
@@ -104,7 +104,8 @@ jobs:
             powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
             -File C:\tests\test-windows-release.ps1 -Mode Container `
             -Version $env:RELEASE_VERSION -Architecture x64 `
-            -AssetDirectory C:\input -WorkDirectory C:\work -OutputDirectory C:\results
+            -AssetDirectory C:\input -WorkDirectory C:\work -OutputDirectory C:\results `
+            -ValidateAppLocalRemediation
           if ($LASTEXITCODE -ne 0) { throw 'Clean-container release test failed; inspect Container-x64.json and MSI logs' }
 
       - name: Upload diagnostic results

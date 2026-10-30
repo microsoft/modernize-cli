@@ -16,7 +16,9 @@ param(
     [string]$WorkDirectory,
 
     [Parameter(Mandatory = $true)]
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+
+    [switch]$ValidateAppLocalRemediation
 )
 
 $ErrorActionPreference = 'Stop'
@@ -169,9 +171,9 @@ public static class ReleaseErrorMode {
         $helper = Join-Path $plugin 'computer-use-mcp.exe'
         $report.CliBeforeRuntime = Invoke-ReleaseProcess (Join-Path $installed 'modernize.exe') '--version'
         $report.HelperBeforeRuntime = Invoke-ReleaseProcess $helper '--help'
-        $runtimeFiles = @(Get-ChildItem (Join-Path $AssetDirectory 'vc-runtime-x64') -Filter '*.dll')
-        if ($runtimeFiles.Count -eq 0) {
-            throw 'App-local runtime comparison requires official Visual Studio redistributable DLLs.'
+        $runtimeFiles = @(Get-Item (Join-Path $AssetDirectory 'vc-runtime-x64\vcruntime140.dll'))
+        if ($runtimeFiles.Count -ne 1) {
+            throw 'App-local runtime comparison requires exactly one official vcruntime140.dll.'
         }
         $report.AppLocalRuntimeFiles = @($runtimeFiles | ForEach-Object {
             [pscustomobject]@{ File = $_.Name; SHA256 = (Get-FileHash $_.FullName).Hash }
@@ -197,7 +199,10 @@ public static class ReleaseErrorMode {
         $report.MsiUninstall = Invoke-ReleaseProcess "$env:WINDIR\System32\msiexec.exe" `
             "/x `"$msi`" /qn /norestart /l*v `"$uninstallLog`"" 180
         Assert-Probe $report.MsiUninstall -ExitCodes @(0, 3010)
-        if ($report.MissingVcRuntimeReproduced) {
+        if ($ValidateAppLocalRemediation -and -not $report.MissingVcRuntimeReproduced) {
+            throw 'Expected the unchanged release helper to reproduce the missing-runtime loader failure.'
+        }
+        if (-not $ValidateAppLocalRemediation -and $report.MissingVcRuntimeReproduced) {
             throw 'Release helper requires an externally installed VC runtime: clean startup failed, then succeeded after installing VC runtime.'
         }
         Assert-Probe $report.CliBeforeRuntime -OutputPattern ([regex]::Escape($Version))
