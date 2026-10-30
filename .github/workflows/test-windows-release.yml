@@ -102,20 +102,24 @@ jobs:
             throw 'Official VC runtime installer signature verification failed'
           }
           Get-FileHash $runtime -Algorithm SHA256 | Format-List
-          $validateAppLocalRemediation = if ($env:RELEASE_VERSION -eq '1.0.77') { 1 } else { 0 }
           docker info --format '{{.OSType}}'
           if ($LASTEXITCODE -ne 0) { throw 'Windows container daemon unavailable' }
-          docker run --rm --isolation=process --network none --memory 4g --cpus 2 `
-            --env MODERNIZE_RELEASE_CONTAINER=1 `
-            --mount "type=bind,source=$assets,target=C:\input,readonly" `
-            --mount "type=bind,source=$scripts,target=C:\tests,readonly" `
-            --mount "type=bind,source=$results,target=C:\results" `
-            mcr.microsoft.com/windows/servercore:ltsc2022 `
-            powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass `
-            -File C:\tests\test-windows-release.ps1 -Mode Container `
-            -Version $env:RELEASE_VERSION -Architecture x64 `
-            -AssetDirectory C:\input -WorkDirectory C:\work -OutputDirectory C:\results `
-            -ValidateAppLocalRemediation $validateAppLocalRemediation
+          $containerArguments = @(
+            'run', '--rm', '--isolation=process', '--network', 'none', '--memory', '4g', '--cpus', '2',
+            '--env', 'MODERNIZE_RELEASE_CONTAINER=1',
+            '--mount', "type=bind,source=$assets,target=C:\input,readonly",
+            '--mount', "type=bind,source=$scripts,target=C:\tests,readonly",
+            '--mount', "type=bind,source=$results,target=C:\results",
+            'mcr.microsoft.com/windows/servercore:ltsc2022',
+            'powershell.exe', '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+            '-File', 'C:\tests\test-windows-release.ps1', '-Mode', 'Container',
+            '-Version', $env:RELEASE_VERSION, '-Architecture', 'x64',
+            '-AssetDirectory', 'C:\input', '-WorkDirectory', 'C:\work', '-OutputDirectory', 'C:\results'
+          )
+          if ($env:RELEASE_VERSION -eq '1.0.77') {
+            $containerArguments += '-ValidateAppLocalRemediation'
+          }
+          & docker @containerArguments
           if ($LASTEXITCODE -ne 0) { throw 'Clean-container release test failed; inspect Container-x64.json and MSI logs' }
 
       - name: Upload diagnostic results
