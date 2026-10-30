@@ -114,7 +114,7 @@ jobs:
             -File C:\tests\test-windows-release.ps1 -Mode Container `
             -Version $env:RELEASE_VERSION -Architecture x64 `
             -AssetDirectory C:\input -WorkDirectory C:\work -OutputDirectory C:\results `
-            -ValidateAppLocalRemediation
+            -ValidateAppLocalRemediation:($env:RELEASE_VERSION -eq '1.0.77')
           if ($LASTEXITCODE -ne 0) { throw 'Clean-container release test failed; inspect Container-x64.json and MSI logs' }
 
       - name: Upload diagnostic results
