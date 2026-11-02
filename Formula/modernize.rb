@@ -1,23 +1,23 @@
 class Modernize < Formula
   desc "AI-powered CLI for application modernization"
   homepage "https://github.com/microsoft/modernize-cli"
-  version "1.0.77"
+  version "1.0.91"
 
   if OS.mac?
     if Hardware::CPU.intel?
-      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.77/modernize_1.0.77_darwin_x64.tar.gz"
-      sha256 "30e993df401d7214073e812987e244d6c980eb271456f2ad97a106b2b88e09bf"
+      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.91/modernize_1.0.91_darwin_x64.tar.gz"
+      sha256 "4917debaeddfb99e4b4dbd5aa37c01167ad427db6575c5aeba2c5216ab689d72"
     elsif Hardware::CPU.arm?
-      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.77/modernize_1.0.77_darwin_arm64.tar.gz"
-      sha256 "3ab5e1bf5105e4aac868c78f4e2089c505b0d6a1b460cdd48104eb26034beb16"
+      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.91/modernize_1.0.91_darwin_arm64.tar.gz"
+      sha256 "a6a8997ff4121826614941597a1c101b811a7ab4097023b812eaa88bd58154a2"
     end
   elsif OS.linux?
     if Hardware::CPU.intel?
-      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.77/modernize_1.0.77_linux_x64.tar.gz"
-      sha256 "a5dea7295cf9058ef62560eb8241b0074461df14f76f3bf3f4991841d9c30a3a"
+      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.91/modernize_1.0.91_linux_x64.tar.gz"
+      sha256 "4a086ec18c2a71af4e580751544c7c49ca716c243c35b086fcb9c232482bf3ec"
     elsif Hardware::CPU.arm?
-      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.77/modernize_1.0.77_linux_arm64.tar.gz"
-      sha256 "1dcd4a0e46d9f4a89d5165fd80a0eb95163272da918c1325aa5a74bd69d32c9d"
+      url "https://github.com/microsoft/modernize-cli/releases/download/v1.0.91/modernize_1.0.91_linux_arm64.tar.gz"
+      sha256 "f8d3f1f1b67c547d7b6f9db25c7c8fa35cf327e96485495b9242cbe75d0bb7c6"
     end
   end
 
