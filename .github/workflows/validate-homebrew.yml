@@ -21,16 +21,10 @@ jobs:
         include:
           - os: macos-latest
             name: macOS ARM64
-            package_type: cask
-            definition: Casks/modernize.rb
           - os: ubuntu-latest
             name: Linux x64
-            package_type: formula
-            definition: Formula/modernize.rb
           - os: ubuntu-24.04-arm
             name: Linux ARM64
-            package_type: formula
-            definition: Formula/modernize.rb
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -42,16 +36,40 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@d482da0e602890d3160aade42e72c8556103bf04 # 2026.10.26.1
 
+      - name: Select Homebrew package type
+        id: package
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" && -f Casks/modernize.rb ]]; then
+            package_type=cask
+            definition=Casks/modernize.rb
+            verify_runtime=true
+          else
+            package_type=formula
+            definition=Formula/modernize.rb
+            if [[ "${{ runner.os }}" == "macOS" ]]; then
+              verify_runtime=false
+              echo "Using legacy macOS Formula validation because no Cask definition exists."
+            else
+              verify_runtime=true
+            fi
+          fi
+
+          {
+            echo "type=$package_type"
+            echo "definition=$definition"
+            echo "verify_runtime=$verify_runtime"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Tap and install modernize
         run: |
           brew tap ${{ github.repository }} https://github.com/${{ github.repository }}
           brew trust ${{ github.repository }}
-          brew install --${{ matrix.package_type }} modernize
+          brew install --${{ steps.package.outputs.type }} modernize
 
       - name: Extract expected version
-        id: package
+        id: version
         run: |
-          version=$(grep '^  version ' "${{ matrix.definition }}" | sed 's/.*"\(.*\)".*/\1/')
+          version=$(grep '^  version ' "${{ steps.package.outputs.definition }}" | sed 's/.*"\(.*\)".*/\1/')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Expected version: $version"
 
@@ -60,16 +78,17 @@ jobs:
         run: |
           output=$(modernize --version)
           echo "Version output: $output"
-          if echo "$output" | grep -q "${{ steps.package.outputs.version }}"; then
+          if echo "$output" | grep -q "${{ steps.version.outputs.version }}"; then
             echo "Version verified successfully"
           else
-            echo "::error::Version mismatch. Expected '${{ steps.package.outputs.version }}' in output but got: $output"
+            echo "::error::Version mismatch. Expected '${{ steps.version.outputs.version }}' in output but got: $output"
             exit 1
           fi
 
       - name: Verify bundled Copilot runtime
+        if: steps.package.outputs.verify_runtime == 'true'
         run: |
-          if [[ "${{ runner.os }}" == "macOS" ]]; then
+          if [[ "${{ steps.package.outputs.type }}" == "cask" ]]; then
             runtime_root="$(brew --caskroom modernize)"
           else
             runtime_root="$(brew --prefix modernize)/libexec"
@@ -106,7 +125,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Homebrew validation failed on ${{ matrix.name }}`,
-              body: `Homebrew installation validation failed for **${{ matrix.name }}**.\n\n**PR:** #${{ github.event.pull_request.number }}\n**Expected version:** ${{ steps.package.outputs.version }}\n**Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nPlease investigate the failure.`,
+              body: `Homebrew installation validation failed for **${{ matrix.name }}**.\n\n**PR:** #${{ github.event.pull_request.number }}\n**Expected version:** ${{ steps.version.outputs.version }}\n**Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nPlease investigate the failure.`,
               labels: ['homebrew', 'validation-failure'],
               assignees: ['galiacheng']
             });
