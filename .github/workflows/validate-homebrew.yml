@@ -6,7 +6,10 @@ on:
 
 jobs:
   validate-homebrew:
-    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'Update Homebrew formula')
+    if: >-
+      github.event.pull_request.merged == true &&
+      (startsWith(github.event.pull_request.title, 'Update Homebrew formula') ||
+      startsWith(github.event.pull_request.title, 'Update Homebrew distribution'))
     
     permissions:
       contents: read
@@ -18,10 +21,16 @@ jobs:
         include:
           - os: macos-latest
             name: macOS ARM64
+            package_type: cask
+            definition: Casks/modernize.rb
           - os: ubuntu-latest
             name: Linux x64
+            package_type: formula
+            definition: Formula/modernize.rb
           - os: ubuntu-24.04-arm
             name: Linux ARM64
+            package_type: formula
+            definition: Formula/modernize.rb
 
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -37,12 +46,12 @@ jobs:
         run: |
           brew tap ${{ github.repository }} https://github.com/${{ github.repository }}
           brew trust ${{ github.repository }}
-          brew install modernize
+          brew install --${{ matrix.package_type }} modernize
 
-      - name: Extract expected version from formula
-        id: formula
+      - name: Extract expected version
+        id: package
         run: |
-          version=$(grep '^  version ' Formula/modernize.rb | sed 's/.*"\(.*\)".*/\1/')
+          version=$(grep '^  version ' "${{ matrix.definition }}" | sed 's/.*"\(.*\)".*/\1/')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Expected version: $version"
 
@@ -51,10 +60,40 @@ jobs:
         run: |
           output=$(modernize --version)
           echo "Version output: $output"
-          if echo "$output" | grep -q "${{ steps.formula.outputs.version }}"; then
+          if echo "$output" | grep -q "${{ steps.package.outputs.version }}"; then
             echo "Version verified successfully"
           else
-            echo "::error::Version mismatch. Expected '${{ steps.formula.outputs.version }}' in output but got: $output"
+            echo "::error::Version mismatch. Expected '${{ steps.package.outputs.version }}' in output but got: $output"
+            exit 1
+          fi
+
+      - name: Verify bundled Copilot runtime
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            runtime_root="$(brew --caskroom modernize)"
+          else
+            runtime_root="$(brew --prefix modernize)/libexec"
+          fi
+
+          runtime=$(find "$runtime_root" -path '*/native/copilot' -type f | head -1)
+          runtime_node=$(find "$runtime_root" -path '*/native/runtime.node' -type f | head -1)
+          test -n "$runtime"
+          test -n "$runtime_node"
+
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            codesign --verify --strict --verbose=4 "$runtime"
+            codesign --verify --strict --verbose=4 "$runtime_node"
+
+            runtime_team=$(codesign -dv --verbose=4 "$runtime" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+            node_team=$(codesign -dv --verbose=4 "$runtime_node" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+            test -n "$runtime_team"
+            test "$runtime_team" = "$node_team"
+          fi
+
+          runtime_stderr=$(mktemp)
+          "$runtime" --headless --no-auto-update --stdio </dev/null >/dev/null 2>"$runtime_stderr"
+          if grep -Eqi 'failed to load runtime|dlopen failed|Library Validation failed' "$runtime_stderr"; then
+            cat "$runtime_stderr" >&2
             exit 1
           fi
 
@@ -67,7 +106,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `Homebrew validation failed on ${{ matrix.name }}`,
-              body: `Homebrew installation validation failed for **${{ matrix.name }}**.\n\n**PR:** #${{ github.event.pull_request.number }}\n**Expected version:** ${{ steps.formula.outputs.version }}\n**Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nPlease investigate the failure.`,
+              body: `Homebrew installation validation failed for **${{ matrix.name }}**.\n\n**PR:** #${{ github.event.pull_request.number }}\n**Expected version:** ${{ steps.package.outputs.version }}\n**Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nPlease investigate the failure.`,
               labels: ['homebrew', 'validation-failure'],
               assignees: ['galiacheng']
             });
