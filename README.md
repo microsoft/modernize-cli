@@ -30,11 +30,33 @@ Minimum requirements:
 ### Linux / macOS
 
 **Option 1 — Homebrew:**
+
+First, add and trust the Modernize tap:
+
 ```bash
 brew tap microsoft/modernize https://github.com/microsoft/modernize-cli
 brew trust microsoft/modernize
-brew install modernize
 ```
+
+On Linux, install the formula:
+
+```bash
+brew install --formula modernize
+```
+
+On macOS, install the cask:
+
+```bash
+brew install --cask modernize
+```
+
+> [!IMPORTANT]
+> If you previously installed Modernize on macOS using the formula, migrate to the cask once:
+>
+> ```bash
+> brew uninstall --formula modernize
+> brew install --cask modernize
+> ```
 
 **Option 2 — Shell script:**
 ```bash
